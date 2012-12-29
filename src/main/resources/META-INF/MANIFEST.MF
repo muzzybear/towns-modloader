@@ -1,0 +1,3 @@
+Manifest-Version: 1.0
+Premain-Class: fi.muzzy.towns.modloader.ModSystem
+Class-Path: javassist.jar
