@@ -1,8 +1,6 @@
 package fi.muzzy.towns.mods;
 
-import java.lang.instrument.*;
 import fi.muzzy.towns.modloader.*;
-import javassist.*;
 
 import java.util.HashMap;
 
@@ -11,23 +9,29 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.DocumentBuilder;
 import org.w3c.dom.*;
 
-public class ActionHotkeys implements ModInterface, ClassFileTransformer {
+public class ActionHotkeys implements ModInterface {
 
 	public void initializeMod(ModSystem system) {
-		system.getTransformer().hookClassTransformation("xaos/h/b", this);
+		loadMenu(system.getDataFile("menu.xml"));
+		loadMenu(system.getDataFile("menu_right.xml"));
+		loadMenu(system.getDataFile("menu_production.xml"));
+		
+		system.getTransformer().queueInjection(
+			"<xaos.h.b.k(int)",
+			"{"+
+			"  String[] foo = fi.muzzy.towns.mods.ActionHotkeys.getMenuAction($1);"+
+			"  if (foo != null) xaos.i.a.a(foo[0], foo[1], null, null, null, 0);"+
+			"}"
+		);
 	}
 
-	private static HashMap<Integer, String[]> menu;
+	private static HashMap<Integer, String[]> menu = new HashMap<Integer, String[]>();
 
-	private static void loadMenu(String menuXmlPath) {
-		menu = new HashMap<Integer, String[]>();
-
-		// load menu.xml and parse hotkeys
+	private static void loadMenu(File xmlFile) {
 		try {
-			File fXmlFile = new File(menuXmlPath);
 			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-			Document doc = dBuilder.parse(fXmlFile);
+			Document doc = dBuilder.parse(xmlFile);
 			doc.getDocumentElement().normalize();
 			
 			NodeList nodes = doc.getElementsByTagName("item");
@@ -41,53 +45,11 @@ public class ActionHotkeys implements ModInterface, ClassFileTransformer {
 				}
 			}
 		} catch (Exception e) {
-			System.err.println("Failed to load menu.xml for ActionHotkeys mod");
+			System.err.println("Failed to load menu for ActionHotkeys mod: "+e);
 		}
 	}
 
-	public static String[] getMenuAction(String menuXmlPath, int keycode) {
-		if (menu == null)
-			loadMenu(menuXmlPath);
-
+	public static String[] getMenuAction(int keycode) {
 		return menu.get(keycode);
 	}
-
-	public byte[] transform(ClassLoader loader, String className,
-		Class clazz, java.security.ProtectionDomain domain, byte[] bytes)
-	{
-		// TODO: hook some function where config is loaded and don't try to load it everytime on keypress
-		if (className.equals("xaos/h/b")) {
-			ClassPool pool = ClassPool.getDefault();
-			CtClass cl = null;
-			try {
-				cl = pool.makeClass(new java.io.ByteArrayInputStream(bytes));
-
-				CtMethod m = cl.getDeclaredMethod("k", new CtClass[]{CtClass.intType});
-				m.insertBefore(
-					"if ($1 >= 2 && $1 <= 11) {"+
-					"  String[] foo = fi.muzzy.towns.mods.ActionHotkeys.getMenuAction(xaos.Towns.a(\"DATA_FOLDER\")+\"menu.xml\", $1);"+
-					"  if (foo != null) xaos.i.a.a(foo[0], foo[1], null, null, null, 0);"+
-					"}"
-				);
-				bytes = cl.toBytecode();
-			} catch (Exception e) {
-				System.err.println("Failed to install ActionHotkeys hook: "+e);
-			} finally {
-				if (cl != null) {
-					cl.detach();
-				}
-			}
-
-		}
-
-		return bytes;
-	}
-
-/*	public static void keypress(int keycode) {
-		if (keycode >= 2 && keycode <= 11) {
-			// numeric keys 1-0
-			System.out.println("Keypress caught: "+keycode);
-		}
-	}
-*/
 }
