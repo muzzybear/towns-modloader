@@ -8,6 +8,7 @@ import java.util.*;
 class SingleClassTransformer implements ClassFileTransformer {
 	private ArrayList<ClassFileTransformer> transformers = new ArrayList<ClassFileTransformer>();
 	private HashMap<MethodSignature, ArrayList<String>> injectBefore = new HashMap<MethodSignature, ArrayList<String>>();
+	private HashMap<MethodSignature, ArrayList<String>> injectAfter = new HashMap<MethodSignature, ArrayList<String>>();
 	private HashMap<MethodSignature, String> injectReplace = new HashMap<MethodSignature, String>();
 	
 	public byte[] transform(ClassLoader loader, String className,
@@ -22,6 +23,7 @@ class SingleClassTransformer implements ClassFileTransformer {
 			// determine methods to be processed
 			Set<MethodSignature> signatures = new HashSet<MethodSignature>();
 			signatures.addAll(injectBefore.keySet());
+			signatures.addAll(injectAfter.keySet());
 			signatures.addAll(injectReplace.keySet());
 			
 			// first run injection queue
@@ -61,6 +63,11 @@ class SingleClassTransformer implements ClassFileTransformer {
 						method.insertBefore(code);
 					}
 				}
+				if (injectAfter.containsKey(sig)) {
+					for (String code : injectAfter.get(sig)) {
+						method.insertAfter(code);
+					}
+				}
 			}
 
 			bytes = cl.toBytecode();
@@ -92,10 +99,16 @@ class SingleClassTransformer implements ClassFileTransformer {
 				injectBefore.put(method, injectionList);
 			}
 			injectionList.add(code);
+		} else if (injectionType == InjectionType.InjectAfter) {
+			ArrayList<String> injectionList = injectAfter.get(method);
+			if (injectionList == null) {
+				injectionList = new ArrayList<String>();
+				injectAfter.put(method, injectionList);
+			}
+			injectionList.add(code);		
 		} else if (injectionType == InjectionType.InjectReplace) {
 			// TODO check that there is only one replacement
 			injectReplace.put(method, code);
 		}
-		// TODO support InjectAfter
 	}
 }
