@@ -55,7 +55,7 @@ public class ModSystem {
 		NodeList modNodes = config.getDocumentElement().getChildNodes();
 		for (int i=0; i<modNodes.getLength(); i++) {
 			Node modNode = modNodes.item(i);
-			if (modNode.getNodeType() == Node.TEXT_NODE)
+			if (modNode.getNodeType() != Node.ELEMENT_NODE)
 				continue;
 			NamedNodeMap attrs = modNode.getAttributes();
 			if (attrs.getNamedItem("name") != null) {
@@ -64,7 +64,7 @@ public class ModSystem {
 			NodeList modActionNodes = modNode.getChildNodes();
 			for (int j=0; j<modActionNodes.getLength(); j++) {
 				Node actionNode = modActionNodes.item(j);
-				if (actionNode.getNodeType() == Node.TEXT_NODE)
+				if (actionNode.getNodeType() != Node.ELEMENT_NODE)
 					continue;
 				NamedNodeMap actionAttrs = actionNode.getAttributes();
 				String actionTag = actionNode.getNodeName().toLowerCase();
